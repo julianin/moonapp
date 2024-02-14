@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌙🤖Login Prueba</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+            height: 100vh;
+        }
+        .floating-button {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            display: none;
+        }
+
+        .iframe-container {
+            position: relative;
+            margin-bottom: 20px;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100%;
+            border: none;
+            transition: transform 0.5s ease-in-out;
+            transform: translateX(-100%);
+        }
+
+        .iframe.active {
+            transform: translateX(0%);
+        }
+
+        .buttons-container {
+            display: flex;
+            justify-content: center;
+        }
+
+        .iframe-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .iframe-button:hover {
+            background-color: #45a049;
+        }
+
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 40px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .login-container h2 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+        }
+        .form-group button {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .mbtn{
+            width: 200px;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .form-group button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="iframe-container">
+        <div id="iframe1" class="iframe active">
+            <div class="container 2" style="height: 100vh">
+                <div class="row">
+                    <div class="col-md-6 offset-md-3">
+                        <div class="login-container">
+                            <h2>🌙🤖Login Prueba</h2>
+                            <form id="loginForm">
+                                <div class="form-group">
+                                    <input type="text" class="form-control" id="username" placeholder="Nombre de usuario" required>
+                                </div>
+                                <div class="form-group">
+                                    <input type="password" class="form-control" id="password" placeholder="Contraseña" required>
+                                </div>
+                                <div class="form-group">
+                                    <button onclick="login(); return false;">Iniciar Sesión</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <iframe id="iframe2" class="iframe" src="paginas/users.html"></iframe>
+        <iframe id="iframe3" class="iframe" src="paginas/slog.html"></iframe>
+    </div>
+</div>
+
+<button class="floating-button mbtn" id="btnlogs" onclick="showIframe('iframe3'); $('#btnusers').fadeIn(); $('#btnlogs').fadeOut(); return false;">Log Sesiones</button>
+<button class="floating-button mbtn" id="btnusers" onclick="showIframe('iframe2'); $('#btnlogs').fadeIn(); $('#btnusers').fadeOut(); return false;">Usuarios</button>
+<button class="floating-button mbtn" id="btnlogout" onclick="logout(); return false;" style="top: 50px; background-color: #b73636;">Cerrar Sesión</button>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    function showIframe(iframeId) {
+        var iframeToShow = $('#' + iframeId);
+        var currentIframe = $('.iframe.active');
+
+        if (iframeToShow[0] !== currentIframe[0]) {
+            currentIframe.removeClass('active');
+            iframeToShow.addClass('active');
+
+            // Mostrar u ocultar los botones flotantes según el iframe activo
+            if (iframeId === 'iframe2') {
+                $('#btnlogs').fadeIn();
+                $('#btnusers').fadeOut();
+            } else if (iframeId === 'iframe3') {
+                $('#btnusers').fadeIn();
+                $('#btnlogs').fadeOut();
+            }
+        }
+    }
+
+    function login() {
+        var username = $('#username').val();
+        var password = $('#password').val();
+        $.ajax({
+            url: 'fun.php',
+            type: 'POST',
+            data: {USER: username, PASS: password},
+            success: function(response) {
+                // Si la respuesta contiene "OK - token"
+                if (response.includes('OK -')) {
+                    // Separamos el token del "OK"
+                    var token = response.split(' - ')[1];
+                    // Guardamos el token en una variable de sesión del explorador
+                    sessionStorage.setItem('TOKEN', token);
+                    // Mostramos el iframe correspondiente
+                    //poner el src del iframe
+                    $('#iframe2').attr('src', 'paginas/users.html');
+                    $("#iframe3").attr('src', 'paginas/slog.html');
+                    showIframe('iframe2');
+                    // Mostramos el botón de Log Sesiones
+                    $("#btnlogs").fadeIn();
+                    // Mostramos el botón de cerrar sesión
+                    $("#btnlogout").fadeIn();
+                } else {
+                    // Si el login falla, mostramos un mensaje de error
+                    alert('Error: ' + response);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error(xhr);
+                alert('Error en la solicitud: ' + status + ' ' + error);
+            }
+        });
+    }
+
+    function logout() {
+        var token = sessionStorage.getItem('TOKEN');
+        sessionStorage.removeItem('TOKEN');
+        $.ajax({
+            url: 'funout.php',
+            type: 'POST',
+            data: { accion: 'logout', token: token },
+            success: function(response) {
+                $('#btnlogs').fadeOut();
+                $('#btnusers').fadeOut();
+                $('#btnlogout').fadeOut();
+
+                showIframe('iframe1');
+                $('#iframe2').attr('src', '');
+                $("#iframe3").attr('src', '');
+            },
+            error: function(xhr, status, error) {
+                console.error(xhr);
+            }
+        });
+    }
+
+
+
+
+</script>
+</body>
+</html>

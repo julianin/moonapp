@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabla de SESSION_LOG</title>
+    <style>
+        .estado-activo {
+            background-color: green;
+            border-radius: 50%;
+            width: 10px;
+            height: 10px;
+            display: inline-block;
+        }
+
+        .estado-inactivo {
+            background-color: red;
+            border-radius: 50%;
+            width: 10px;
+            height: 10px;
+            display: inline-block;
+        }
+    </style>
+    <!-- Incluimos Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
+</head>
+<body>
+<div class="container mt-4">
+    <table id="miTabla" class="table table-striped">
+        <thead>
+        <tr>
+            <th style="display: none">Código</th>
+            <th>Código de Usuario</th>
+            <th>Estado</th>
+            <th>Fecha</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr><td colspan="4" style="text-align: center"><span class="loader"></span></td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Incluimos la biblioteca DataTables -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
+<script src="../libs/mibernate/mibernate.js"></script>
+<!-- Incluimos Bootstrap JS -->
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // Inicializamos Mibernate
+        mibernate(["SESSION_LOG"]); // Ajusta la tabla según sea necesario
+        mibernateAll();
+
+        var table;
+
+        // Esperamos 0.5 segundos antes de configurar DataTables y otros eventos
+        setTimeout(function() {
+            table = $('#miTabla').DataTable({
+                "searching": true,
+                "ordering": true,
+                "paging": false,
+                "info": false,
+                "data": mi_SESSION_LOG,
+                "columns": [
+                    { "data": "SLOG_CODIGO", "visible": false }, // Ocultamos la columna del Código
+                    { "data": "USER_ID" },
+                    {
+                        "data": "SLOG_STATE",
+                        "render": function(data, type, row) {
+                            if (data === "1") {
+                                return "Entrada";
+                            } else {
+                                return 'Salida';
+                            }
+                        }
+                    },
+                    { "data": "SLOG_FECHA" }
+                ]
+            });
+        }, 500); // Esperamos 0.5 segundos
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ejemplo de DataTables con Bootstrap y Mibernate</title>
+    <style>
+        .loader {
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            position: absolute;
+            animation: rotate 1s linear infinite
+        }
+        .loader::before , .loader::after {
+            content: "";
+            box-sizing: border-box;
+            position: absolute;
+            inset: 0px;
+            border-radius: 50%;
+            border: 5px solid #FFF;
+            animation: prixClipFix 2s linear infinite ;
+        }
+        .loader::after{
+            inset: 8px;
+            transform: rotate3d(90, 90, 0, 180deg );
+            border-color: #FF3D00;
+        }
+
+        @keyframes rotate {
+            0%   {transform: rotate(0deg)}
+            100%   {transform: rotate(360deg)}
+        }
+
+        @keyframes prixClipFix {
+            0%   {clip-path:polygon(50% 50%,0 0,0 0,0 0,0 0,0 0)}
+            50%  {clip-path:polygon(50% 50%,0 0,100% 0,100% 0,100% 0,100% 0)}
+            75%, 100%  {clip-path:polygon(50% 50%,0 0,100% 0,100% 100%,100% 100%,100% 100%)}
+        }
+
+        .estado-activo {
+            background-color: green;
+            border-radius: 50%;
+            width: 10px;
+            height: 10px;
+            display: inline-block;
+        }
+
+        .estado-inactivo {
+            background-color: red;
+            border-radius: 50%;
+            width: 10px;
+            height: 10px;
+            display: inline-block;
+        }
+
+        .fecha-baja {
+            background-color: #f2f2f2;
+            color: #808080;
+        }
+    </style>
+    <!-- Incluimos Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
+</head>
+<body>
+<div class="container mt-4">
+    <div class="row">
+        <div class="col">
+            <button id="nuevoUsuario" class="btn btn-primary mb-3">Nuevo Usuario</button>
+        </div>
+    </div>
+    <table id="miTabla" class="table table-striped">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Password</th>
+            <th>Fecha de Alta</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr><td colspan="7" style="text-align: center"><span class="loader"></span></td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="editarModal" tabindex="-1" role="dialog" aria-labelledby="editarModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editarModalLabel">Editar Valor</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="valorActual">Valor Actual:</label>
+                    <input type="text" class="form-control" id="valorActual" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="nuevoValor">Nuevo Valor:</label>
+                    <input type="text" class="form-control" id="nuevoValor">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="guardarCambiosModal">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Nuevo Usuario -->
+<div class="modal fade" id="nuevoUsuarioModal" tabindex="-1" role="dialog" aria-labelledby="nuevoUsuarioModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="nuevoUsuarioModalLabel">Nuevo Usuario</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="formNuevoUsuario">
+                    <div class="form-group">
+                        <label for="nombre">Nombre:</label>
+                        <input type="text" class="form-control" id="nombre" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email:</label>
+                        <input type="email" class="form-control" id="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password:</label>
+                        <input type="password" class="form-control" id="password" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="guardarNuevoUsuario">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Incluimos la biblioteca DataTables -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
+<script src="../libs/mibernate/mibernate.js"></script>
+<!-- Incluimos Bootstrap JS -->
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // Inicializamos Mibernate
+        mibernate(["USER"]); // Ajusta la tabla según sea necesario
+        mibernateAll();
+
+        var table;
+
+        // Esperamos 0.5 segundos antes de configurar DataTables y otros eventos
+        setTimeout(function() {
+            // Filtrar los datos para excluir los registros con fecha de baja
+            var filteredData = mi_USER.filter(function(user) {
+                return !user.USER_FECHA_BAJA; // Excluir los registros con fecha de baja
+            });
+
+            table = $('#miTabla').DataTable({
+                "searching": true,
+                "ordering": true,
+                "paging": false,
+                "info": false,
+                "data": filteredData, // Usar los datos filtrados
+                "columns": [
+                    { "data": "USER_ID", "visible": true }, // Ocultamos la columna del ID
+                    { "data": "USER_NOMBRE", "editable": true },
+                    { "data": "USER_EMAIL", "editable": true },
+                    { "data": "USER_PASS", "editable": true },
+                    { "data": "USER_FECHA_ALTA", "editable": false },
+                    {
+                        "data": "USER_SLOG",
+                        "render": function(data, type, row) {
+                            if (data === "1") {
+                                return '<span class="estado-activo"></span>';
+                            } else {
+                                return '<span class="estado-inactivo"></span>';
+                            }
+                        },
+                        "editable": false
+                    },
+                    {
+                        "data": null,
+                        "render": function(data, type, row) {
+                            return '<button class="btn btn-danger btn-borrar">Borrar</button>';
+                        }
+                    }
+                ],
+                "createdRow": function (row, data, index) {
+                    if (data.USER_FECHA_BAJA) {
+                        $(row).addClass('fecha-baja');
+                    }
+                }
+            });
+
+            // Borrar registro al hacer clic en el botón de borrar
+            $('#miTabla').on('click', '.btn-borrar', function(event) {
+                var rowData = table.row($(this).parents('tr')).data();
+
+                // Actualizar la fecha de baja a la fecha y hora actuales
+                rowData.USER_FECHA_BAJA = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+                // Actualizar la base de datos utilizando Mibernate
+                miUPDATE_F(new USER(rowData.USER_ID, rowData.USER_NOMBRE, rowData.USER_PASS, rowData.USER_EMAIL, rowData.USER_FECHA_ALTA, rowData.USER_FECHA_BAJA, rowData.USER_SLOG));
+
+                // Ocultar la fila de la tabla con un efecto de desvanecimiento
+                $(this).parents('tr').fadeOut(400, function() {
+                    table.row($(this)).remove().draw(false); // "false" para evitar que DataTables reordene las filas
+                });
+            });
+
+
+            // Habilitar edición de celdas al hacer clic
+            $('#miTabla').on('click', 'td', function() {
+                var cell = table.cell(this);
+                if (cell.index().column !== 0 && cell.index().column !== 4 && cell.index().column !== 5 && cell.index().column !== 6) {
+                    var currentValue = $(this).text();
+                    $('#valorActual').val(currentValue);
+                    selectedCell = cell;
+                    $('#editarModal').modal('show');
+                }
+            });
+
+            // Guardar cambios al hacer clic en el botón del modal
+            $('#guardarCambiosModal').on('click', function() {
+                var nuevoValor = $('#nuevoValor').val();
+                selectedCell.data(nuevoValor).draw();
+
+                // Obtener el objeto de la fila modificada
+                var rowData = table.row(selectedCell.index().row).data();
+
+                // Actualizar el objeto en la base de datos utilizando Mibernate
+                miUPDATE_F(new USER(rowData.USER_ID, rowData.USER_NOMBRE, rowData.USER_PASS, rowData.USER_EMAIL, rowData.USER_FECHA_ALTA, rowData.USER_FECHA_BAJA, rowData.USER_SLOG));
+
+                $('#editarModal').modal('hide');
+            });
+
+            // Guardar la celda seleccionada al abrir el modal
+            $('#editarModal').on('shown.bs.modal', function (event) {
+                $('#nuevoValor').focus();
+            });
+
+            // Mostrar modal para agregar nuevo usuario
+            $('#nuevoUsuario').click(function() {
+                $('#nuevoUsuarioModal').modal('show');
+            });
+
+            // Guardar nuevo usuario
+            $('#guardarNuevoUsuario').click(function() {
+                var nombre = $('#nombre').val();
+                var email = $('#email').val();
+                var password = $('#password').val();
+                var fechaAlta = new Date().toISOString().slice(0, 19).replace('T', ' '); // Fecha de alta actual
+
+                // Insertar nuevo usuario en la base de datos utilizando Mibernate
+                miINSERT_F(new USER(null, nombre, password, email, fechaAlta, null, '0'));
+
+                // Agregar el nuevo usuario a los datos existentes
+                var nuevoUsuario = new USER(null, nombre, password, email, fechaAlta, null, '0');
+                mi_USER.push(nuevoUsuario);
+
+                // Dibujar la tabla con los datos actualizados
+                table.row.add(nuevoUsuario).draw();
+
+                // Limpiar campos del formulario
+                $('#nombre').val('');
+                $('#email').val('');
+                $('#password').val('');
+
+                // Cerrar modal
+                $('#nuevoUsuarioModal').modal('hide');
+            });
+
+        }, 1500); // Esperamos 0.5 segundos
+    });
+
+</script>
+
+</body>
+</html>
